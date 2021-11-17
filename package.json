@@ -37,6 +37,7 @@
     "@angular/router": "12.2.13",
     "@ngneat/transloco": "^2.22.0",
     "primeng": "12.2.2",
-    "rxjs": "6.6.3"
+    "rxjs": "6.6.3",
+    "slash": "^4.0.0"
   }
 }

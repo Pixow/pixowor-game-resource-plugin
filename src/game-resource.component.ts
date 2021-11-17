@@ -1,3 +1,4 @@
+import slash from "slash";
 import { CommonModule } from "@angular/common";
 import { Component, NgModule, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
@@ -129,9 +130,11 @@ export class GameResourceComponent implements OnInit {
           elementCap.deserialize(fs.readFileSync(filePath));
           const element = elementCap.treeNodes[0] as ElementNode;
 
-          const reg = /\/(.*\/.*)\//
+          const reg = /\/(.*\/.*)\//;
+          // Conver Windows backslash paths to slash paths foo\\bar -> foo/bar
+          const sourcePath = slash(filePath.split(file)[0].split(this.gameFolder)[1]);
 
-          const ret = filePath.split(file)[0].split(this.gameFolder)[1].match(reg); // Like Package/TestElement
+          const ret = sourcePath.match(reg); // Like Package/TestElement
           if (ret) {
             element.resRootPath = ret[1];
           } 
