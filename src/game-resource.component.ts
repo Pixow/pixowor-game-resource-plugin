@@ -106,6 +106,11 @@ export class GameResourceComponent implements OnInit {
           const sceneCapsule = new Capsule();
           sceneCapsule.deserialize(fs.readFileSync(filePath));
 
+          this.pixoworCore.setEditingScene({
+            file: (this.selectedFile as FileStat).file,
+            filePath: (this.selectedFile as FileStat).path
+          })
+
           this.pixoworCore.stateManager
             .getVariable("SceneCapsule")
             .next(sceneCapsule);
@@ -114,7 +119,7 @@ export class GameResourceComponent implements OnInit {
       {
         label: "Use As Brush",
         command: () => {
-          const sceneCapsule: Capsule = this.pixoworCore.stateManager.getVariable("SceneCapsule").getValue();
+          const sceneCapsule: Capsule = this.pixoworCore.stateManager.getVariable<Capsule>("SceneCapsule").getValue();
           const scene = sceneCapsule.treeNodes[0] as SceneNode
           
           const file = (this.selectedFile as FileStat).file;
@@ -123,12 +128,18 @@ export class GameResourceComponent implements OnInit {
           const elementCap = new Capsule();
           elementCap.deserialize(fs.readFileSync(filePath));
           const element = elementCap.treeNodes[0] as ElementNode;
-          element.resRootPath = filePath.split(file)[0].split(this.gameFolder)[1]; // Like Package/TestElement
-          
+
+          const reg = /\/(.*\/.*)\//
+
+          const ret = filePath.split(file)[0].split(this.gameFolder)[1].match(reg); // Like Package/TestElement
+          if (ret) {
+            element.resRootPath = ret[1];
+          } 
+
           scene.addElementPrefab(element.id, element);
 
           const sceneEditorCanvas = this.pixoworCore.stateManager
-            .getVariable("SceneEditorCanvas")
+            .getVariable<any>("SceneEditorCanvas")
             .getValue();
 
           sceneEditorCanvas.updateElementPrefabs(scene.elementPrefabs)
