@@ -10,7 +10,14 @@ import { ContextMenuModule } from "primeng/contextmenu";
 import { ContextMenuService, MenuItem, TreeNode } from "primeng/api";
 import * as path from "path";
 import * as fs from "fs";
-import { Capsule, Constants, ElementNode, NodeType, SceneNode } from "game-capsule";
+import {
+  Capsule,
+  Constants,
+  ElementNode,
+  GameNode,
+  NodeType,
+  SceneNode,
+} from "game-capsule";
 import { CreateElementComponent } from "./create-element.component";
 import { DialogService, DynamicDialogModule } from "primeng/dynamicdialog";
 
@@ -28,6 +35,7 @@ export class GameResourceComponent implements OnInit {
   selectedFile: TreeNode;
 
   gameFolder: string;
+  gameCapsule: Capsule;
 
   constructor(
     private pixoworCore: PixoworCore,
@@ -50,10 +58,15 @@ export class GameResourceComponent implements OnInit {
 
     this.getResourceFiles();
 
+    // TODO: Remove this logic to main file app.component.ts
     // init GameCapsule
-    const gameCapsule = new Capsule();
-    gameCapsule.deserialize(fs.readFileSync(path.join(filePath, `${file}.pi`)));
-    this.pixoworCore.stateManager.getVariable("GameCapsule").next(gameCapsule);
+    this.gameCapsule = new Capsule();
+    this.gameCapsule.deserialize(
+      fs.readFileSync(path.join(filePath, `${file}.pi`))
+    );
+    this.pixoworCore.stateManager
+      .getVariable("GameCapsule")
+      .next(this.gameCapsule);
 
     this.items = [
       {
@@ -78,10 +91,7 @@ export class GameResourceComponent implements OnInit {
 
             const elementDir = path.join(filePath, name);
             this.pixoworCore.fileSystemManager
-              .writeFile(
-                path.join(elementDir, `${name}.pi`),
-                cap.serialize()
-              )
+              .writeFile(path.join(elementDir, `${name}.pi`), cap.serialize())
               .then(() => {
                 this.getResourceFiles();
               });
@@ -104,13 +114,36 @@ export class GameResourceComponent implements OnInit {
         label: "Edit Scene",
         command: () => {
           const filePath = (this.selectedFile as FileStat).path;
+          const sceneBuffer = fs.readFileSync(filePath);
+          const sceneObjs = Capsule.Decode(sceneBuffer);
           const sceneCapsule = new Capsule();
-          sceneCapsule.deserialize(fs.readFileSync(filePath));
+          // fist import elementprefabs
+          for (const prefab of sceneObjs["elementPrefabs"]) {
+            const prefabFiles = fs.readdirSync(
+              path.join(this.gameFolder, prefab.resRootPath)
+            );
+            const prefabConfigFile = prefabFiles.find(
+              (file) => file.indexOf(".pi") >= 0
+            );
+
+            if (!prefabConfigFile) continue;
+            const eleBuff = fs.readFileSync(
+              path.join(this.gameFolder, prefab.resRootPath, prefabConfigFile)
+            );
+            const elementCapsule = new Capsule();
+            elementCapsule.deserialize(eleBuff);
+            const element = elementCapsule.treeNodes[0] as ElementNode;
+
+            sceneCapsule.addElementPrefab(element.id, element);
+          }
+          sceneCapsule.deserialize(sceneBuffer);
+
+          console.log("Editing Scene Capsule: ", sceneCapsule);
 
           this.pixoworCore.setEditingScene({
             file: (this.selectedFile as FileStat).file,
-            filePath: (this.selectedFile as FileStat).path
-          })
+            filePath: (this.selectedFile as FileStat).path,
+          });
 
           this.pixoworCore.stateManager
             .getVariable("SceneCapsule")
@@ -120,9 +153,11 @@ export class GameResourceComponent implements OnInit {
       {
         label: "Use As Brush",
         command: () => {
-          const sceneCapsule: Capsule = this.pixoworCore.stateManager.getVariable<Capsule>("SceneCapsule").getValue();
-          const scene = sceneCapsule.treeNodes[0] as SceneNode
-          
+          const sceneCapsule: Capsule = this.pixoworCore.stateManager
+            .getVariable<Capsule>("SceneCapsule")
+            .getValue();
+          const scene = sceneCapsule.treeNodes[0] as SceneNode;
+
           const file = (this.selectedFile as FileStat).file;
           const filePath = (this.selectedFile as FileStat).path;
 
@@ -130,26 +165,26 @@ export class GameResourceComponent implements OnInit {
           elementCap.deserialize(fs.readFileSync(filePath));
           const element = elementCap.treeNodes[0] as ElementNode;
 
-          const reg = /\/(.*\/.*)\//;
+          const reg = /\/(.*\/.*\/)/;
           // Conver Windows backslash paths to slash paths foo\\bar -> foo/bar
-          const sourcePath = slash(filePath.split(file)[0].split(this.gameFolder)[1]);
+          const sourcePath = slash(
+            filePath.split(file)[0].split(this.gameFolder)[1]
+          );
 
           const ret = sourcePath.match(reg); // Like Package/TestElement
           if (ret) {
             element.resRootPath = ret[1];
-          } 
+          }
 
-          scene.addElementPrefab(element.id, element);
+          sceneCapsule.addElementPrefab(element.id, element);
 
           const sceneEditorCanvas = this.pixoworCore.stateManager
             .getVariable<any>("SceneEditorCanvas")
             .getValue();
 
-          sceneEditorCanvas.updateElementPrefabs(scene.elementPrefabs)
+          sceneEditorCanvas.updateElementPrefabs(sceneCapsule.elementPrefabs);
 
-          sceneEditorCanvas.setBrush(
-            element.id
-          );
+          sceneEditorCanvas.setBrush(element.id);
         },
       },
       {
@@ -210,7 +245,9 @@ export class GameResourceComponent implements OnInit {
   createScene() {
     const sceneCapsule = new Capsule();
     const scene = sceneCapsule.add.scene();
-    console.log("🚀 ~ file: game-resource.component.ts ~ line 188 ~ GameResourceComponent ~ createScene ~ scene", scene)
+
+    const gameNode = this.gameCapsule.treeNodes[0] as GameNode;
+    gameNode.addScene(scene.id, scene.name);
 
     fs.writeFileSync(
       path.join(this.gameFolder, `${scene.name}.pi`),
