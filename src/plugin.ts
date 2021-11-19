@@ -36,6 +36,7 @@ export class GameResourcePlugin extends Plugin {
 
     this.pixoworCore.workspace.emit(UIEvents.LOAD_IN_SIDEBAR, {
       componentName: "GameResource",
+      sequence: 2,
       header: "游戏资源管理"
     });
   }

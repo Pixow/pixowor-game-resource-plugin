@@ -133,6 +133,7 @@ export class GameResourceComponent implements OnInit {
             const elementCapsule = new Capsule();
             elementCapsule.deserialize(eleBuff);
             const element = elementCapsule.treeNodes[0] as ElementNode;
+            element.resRootPath = prefab.resRootPath;
 
             sceneCapsule.addElementPrefab(element.id, element);
           }
