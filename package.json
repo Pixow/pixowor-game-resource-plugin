@@ -38,6 +38,8 @@
     "@ngneat/transloco": "^2.22.0",
     "primeng": "12.2.2",
     "rxjs": "6.6.3",
-    "slash": "^4.0.0"
+    "slash": "^4.0.0",
+    "game-capsule": "git+ssh://git@code.apowo.com:PixelPai/game-capsule.git#v2",
+    "pixowor-core": "git+ssh://git@github.com:Pixow/pixowor-core.git#develop"
   }
 }
