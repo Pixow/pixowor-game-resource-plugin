@@ -10,9 +10,14 @@ export class GameResourcePlugin extends Plugin {
     super(pixoworCore, manifest);
   }
 
-  async prepare(): Promise<any> {
+  async install(): Promise<any> {
     return new Promise((resolve, reject) => {
-      this.pixoworCore.fileSystemManager
+      this.pixoworCore.state.registerComponent(
+        "GameResource",
+        <Component>GameResourceComponent
+      );
+
+      this.pixoworCore.fileSystem
         .installI18n({
           en: en,
           "zh-CN": zhCN,
@@ -27,11 +32,7 @@ export class GameResourcePlugin extends Plugin {
 
   activate() {
     this.colorLog(`${this.name} activate, Pid: ${this.pid}`);
-    this.pixoworCore.stateManager.registerComponent(
-      "GameResource",
-      <Component>GameResourceComponent
-    );
-
+ 
     console.log("GameResource Plugin Load in Sidebar ")
 
     this.pixoworCore.workspace.emit(UIEvents.LOAD_IN_SIDEBAR, {
